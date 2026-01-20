@@ -1,6 +1,21 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import path from 'path';
 
+type FileFilterCallback = (err: Error | null, accept?: boolean) => void;
+type FileFilterFn = (req: unknown, file: { mimetype: string }, cb: FileFilterCallback) => void;
+
+interface MulterInstance {
+  storage: {
+    _handleFile: (
+      req: unknown,
+      file: { originalname: string },
+      cb: (err: Error | null, info?: { filename: string }) => void
+    ) => void;
+  };
+  fileFilter: FileFilterFn;
+  limits: { fileSize: number };
+}
+
 vi.mock('../../../shared/utils', () => ({
   ensureDir: vi.fn(),
 }));
@@ -16,20 +31,20 @@ describe('multer.config', () => {
       const { uploadVideo } = await import('../../../shared/config/multer.config');
 
       expect(uploadVideo).toBeDefined();
-      expect(uploadVideo.storage).toBeDefined();
+      expect((uploadVideo as unknown as MulterInstance).storage).toBeDefined();
     });
 
     it('should generate unique filename with timestamp and random suffix', async () => {
       const { uploadVideo } = await import('../../../shared/config/multer.config');
 
-      const storage = uploadVideo.storage as any;
+      const storage = (uploadVideo as unknown as MulterInstance).storage;
       const mockReq = {};
       const mockFile = {
         originalname: 'test-video.mp4',
       };
 
       const filename = await new Promise<string>((resolve) => {
-        storage._handleFile(mockReq, mockFile, (err: Error | null, info: any) => {
+        storage._handleFile(mockReq, mockFile, (err: Error | null, info?: { filename: string }) => {
           if (err) {
             // If _handleFile doesn't work directly, test the filename generator
             const dateNow = Date.now();
@@ -43,7 +58,6 @@ describe('multer.config', () => {
         });
       }).catch(() => {
         // Fallback: verify expected pattern
-        const pattern = /^test-video-\d+-\d+\.mp4$/;
         return 'test-video-1234567890-123456789.mp4';
       });
 
@@ -73,14 +87,14 @@ describe('multer.config', () => {
     it.each(allowedMimeTypes)('should accept %s mime type', async (mimeType) => {
       const { uploadVideo } = await import('../../../shared/config/multer.config');
 
-      const fileFilter = (uploadVideo as any).fileFilter;
+      const fileFilter = (uploadVideo as unknown as MulterInstance).fileFilter;
       const mockReq = {};
       const mockFile = { mimetype: mimeType };
 
       const result = await new Promise<boolean>((resolve) => {
-        fileFilter(mockReq, mockFile, (err: Error | null, accept: boolean) => {
+        fileFilter(mockReq, mockFile, (err: Error | null, accept?: boolean) => {
           if (err) resolve(false);
-          else resolve(accept);
+          else resolve(accept ?? false);
         });
       });
 
@@ -90,12 +104,12 @@ describe('multer.config', () => {
     it.each(disallowedMimeTypes)('should reject %s mime type', async (mimeType) => {
       const { uploadVideo } = await import('../../../shared/config/multer.config');
 
-      const fileFilter = (uploadVideo as any).fileFilter;
+      const fileFilter = (uploadVideo as unknown as MulterInstance).fileFilter;
       const mockReq = {};
       const mockFile = { mimetype: mimeType };
 
       await new Promise<void>((resolve) => {
-        fileFilter(mockReq, mockFile, (err: Error | null, accept: boolean) => {
+        fileFilter(mockReq, mockFile, (err: Error | null, accept?: boolean) => {
           if (err) {
             expect(err.message).toContain('Invalid file type');
             expect(err.message).toContain(mimeType);
@@ -110,7 +124,7 @@ describe('multer.config', () => {
     it('should include mime type in error message when rejecting', async () => {
       const { uploadVideo } = await import('../../../shared/config/multer.config');
 
-      const fileFilter = (uploadVideo as any).fileFilter;
+      const fileFilter = (uploadVideo as unknown as MulterInstance).fileFilter;
       const mockReq = {};
       const mockFile = { mimetype: 'application/json' };
 
@@ -129,7 +143,7 @@ describe('multer.config', () => {
     it('should have file size limit of 500MB', async () => {
       const { uploadVideo } = await import('../../../shared/config/multer.config');
 
-      const limits = (uploadVideo as any).limits;
+      const limits = (uploadVideo as unknown as MulterInstance).limits;
       expect(limits).toBeDefined();
       expect(limits.fileSize).toBe(500 * 1024 * 1024);
     });

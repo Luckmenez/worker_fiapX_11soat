@@ -223,9 +223,7 @@ describe('ProcessVideoService', () => {
       vi.spyOn(fs, 'existsSync').mockReturnValue(true);
       vi.spyOn(fs, 'statSync').mockReturnValue({ size: 1024 * 1024 } as fs.Stats);
 
-      (mockFfmpegService.extractFrames as Mock).mockRejectedValue(
-        new Error('FFmpeg error')
-      );
+      (mockFfmpegService.extractFrames as Mock).mockRejectedValue(new Error('FFmpeg error'));
 
       const options: ProcessVideoOptions = {
         file: videoFile,
@@ -243,9 +241,7 @@ describe('ProcessVideoService', () => {
       vi.spyOn(fs, 'existsSync').mockReturnValue(true);
       vi.spyOn(fs, 'statSync').mockReturnValue({ size: 1024 * 1024 } as fs.Stats);
 
-      (fileSystemUtils.zipDirectory as Mock).mockRejectedValue(
-        new Error('Zip error')
-      );
+      (fileSystemUtils.zipDirectory as Mock).mockRejectedValue(new Error('Zip error'));
 
       const options: ProcessVideoOptions = {
         file: videoFile,
@@ -264,7 +260,13 @@ describe('ProcessVideoService', () => {
       vi.spyOn(fs, 'statSync').mockReturnValue({ size: 1024 * 1024 } as fs.Stats);
 
       (mockFfmpegService.extractFrames as Mock).mockResolvedValue({
-        frames: ['img_00001.jpg', 'img_00002.jpg', 'img_00003.jpg', 'img_00004.jpg', 'img_00005.jpg'],
+        frames: [
+          'img_00001.jpg',
+          'img_00002.jpg',
+          'img_00003.jpg',
+          'img_00004.jpg',
+          'img_00005.jpg',
+        ],
         outputDir: testTempDir,
       });
 
@@ -305,10 +307,17 @@ describe('ProcessVideoService', () => {
 
       // Add artificial delay in mock
       (mockFfmpegService.extractFrames as Mock).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({
-          frames: ['img_00001.jpg'],
-          outputDir: testTempDir,
-        }), 50))
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  frames: ['img_00001.jpg'],
+                  outputDir: testTempDir,
+                }),
+              50
+            )
+          )
       );
 
       const options: ProcessVideoOptions = {

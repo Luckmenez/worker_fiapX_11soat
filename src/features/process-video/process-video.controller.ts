@@ -21,7 +21,9 @@ export class ProcessVideoController {
   async process(req: Request<object, object, ProcessVideoBody>, res: Response): Promise<void> {
     const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     console.log(`[${requestId}] [CONTROLLER] Requisição recebida`);
-    console.log(`[${requestId}] [CONTROLLER] File: ${req.file?.filename || 'N/A'}, Size: ${req.file?.size || 0} bytes`);
+    console.log(
+      `[${requestId}] [CONTROLLER] File: ${req.file?.filename || 'N/A'}, Size: ${req.file?.size || 0} bytes`
+    );
 
     try {
       if (!req.file) {
@@ -41,7 +43,9 @@ export class ProcessVideoController {
         return;
       }
 
-      console.log(`[${requestId}] [CONTROLLER] Parâmetros: intervalMs=${intervalMs}ms, format=${format}`);
+      console.log(
+        `[${requestId}] [CONTROLLER] Parâmetros: intervalMs=${intervalMs}ms, format=${format}`
+      );
       console.log(`[${requestId}] [CONTROLLER] Iniciando processamento...`);
 
       const startTime = Date.now();
@@ -51,14 +55,19 @@ export class ProcessVideoController {
         format,
       });
 
-      console.log(`[${requestId}] [CONTROLLER] Processamento concluído em ${Date.now() - startTime}ms`);
+      console.log(
+        `[${requestId}] [CONTROLLER] Processamento concluído em ${Date.now() - startTime}ms`
+      );
       console.log(`[${requestId}] [CONTROLLER] Resultado: ${result.frames} frames extraídos`);
 
       res.json(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error(`[${requestId}] [CONTROLLER] ERRO: ${message}`);
-      console.error(`[${requestId}] [CONTROLLER] Stack:`, error instanceof Error ? error.stack : 'N/A');
+      console.error(
+        `[${requestId}] [CONTROLLER] Stack:`,
+        error instanceof Error ? error.stack : 'N/A'
+      );
       res.status(500).json({ error: message });
     }
   }
