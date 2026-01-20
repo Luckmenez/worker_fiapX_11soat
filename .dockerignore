@@ -1,0 +1,17 @@
+node_modules
+dist
+npm-debug.log
+.git
+.gitignore
+.env
+.env.*
+*.md
+.vscode
+.idea
+input/*
+output/*
+!input/.gitkeep
+!output/.gitkeep
+*.log
+coverage
+.nyc_output
