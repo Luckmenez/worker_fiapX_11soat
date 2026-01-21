@@ -201,9 +201,7 @@ describe('ProcessVideoController', () => {
       } as Express.Multer.File;
       mockRequest.body = {};
 
-      (mockService.processVideo as Mock).mockRejectedValue(
-        new Error('Processing failed')
-      );
+      (mockService.processVideo as Mock).mockRejectedValue(new Error('Processing failed'));
 
       await controller.process(mockRequest as Request, mockResponse as Response);
 

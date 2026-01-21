@@ -19,7 +19,9 @@ export class FfmpegService implements IFfmpegService {
     console.log(`[FFMPEG] Iniciando extractFrames`);
     console.log(`[FFMPEG] Input: ${inputPath}`);
     console.log(`[FFMPEG] Output dir: ${outputDir}`);
-    console.log(`[FFMPEG] Intervalo: ${intervalMs}ms (${intervalSeconds}s) = ${fps.toFixed(4)} FPS`);
+    console.log(
+      `[FFMPEG] Intervalo: ${intervalMs}ms (${intervalSeconds}s) = ${fps.toFixed(4)} FPS`
+    );
     console.log(`[FFMPEG] Format: ${format}`);
 
     const framesPattern = path.join(outputDir, `img_%05d.${format}`);
@@ -63,7 +65,9 @@ export class FfmpegService implements IFfmpegService {
       console.log(`[FFMPEG] FFmpeg path: ${ffmpegPath}`);
       console.log(`[FFMPEG] Spawning process...`);
 
-      const ffmpegProcess: ChildProcess = spawn(ffmpegPath, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+      const ffmpegProcess: ChildProcess = spawn(ffmpegPath, args, {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
 
       console.log(`[FFMPEG] Processo criado com PID: ${ffmpegProcess.pid}`);
 
@@ -73,7 +77,9 @@ export class FfmpegService implements IFfmpegService {
       // Log de progresso a cada 10 segundos
       const progressInterval = setInterval(() => {
         const elapsed = Math.round((Date.now() - lastProgressLog) / 1000);
-        console.log(`[FFMPEG] Processo ainda em execução... (${elapsed}s desde último log, PID: ${ffmpegProcess.pid})`);
+        console.log(
+          `[FFMPEG] Processo ainda em execução... (${elapsed}s desde último log, PID: ${ffmpegProcess.pid})`
+        );
         lastProgressLog = Date.now();
       }, 10000);
 

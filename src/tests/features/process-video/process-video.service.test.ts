@@ -13,6 +13,7 @@ vi.mock('../../../shared/utils/file-system.utils', async () => {
     ...actual,
     createTempDir: vi.fn(),
     removeDir: vi.fn(),
+    removeFile: vi.fn(),
     zipDirectory: vi.fn(),
     ensureDir: vi.fn(),
   };
@@ -42,6 +43,7 @@ describe('ProcessVideoService', () => {
 
     (fileSystemUtils.createTempDir as Mock).mockReturnValue(testTempDir);
     (fileSystemUtils.removeDir as Mock).mockImplementation(() => {});
+    (fileSystemUtils.removeFile as Mock).mockImplementation(() => {});
     (fileSystemUtils.zipDirectory as Mock).mockResolvedValue(undefined);
     (fileSystemUtils.ensureDir as Mock).mockImplementation(() => {});
 
@@ -223,9 +225,7 @@ describe('ProcessVideoService', () => {
       vi.spyOn(fs, 'existsSync').mockReturnValue(true);
       vi.spyOn(fs, 'statSync').mockReturnValue({ size: 1024 * 1024 } as fs.Stats);
 
-      (mockFfmpegService.extractFrames as Mock).mockRejectedValue(
-        new Error('FFmpeg error')
-      );
+      (mockFfmpegService.extractFrames as Mock).mockRejectedValue(new Error('FFmpeg error'));
 
       const options: ProcessVideoOptions = {
         file: videoFile,
@@ -243,9 +243,7 @@ describe('ProcessVideoService', () => {
       vi.spyOn(fs, 'existsSync').mockReturnValue(true);
       vi.spyOn(fs, 'statSync').mockReturnValue({ size: 1024 * 1024 } as fs.Stats);
 
-      (fileSystemUtils.zipDirectory as Mock).mockRejectedValue(
-        new Error('Zip error')
-      );
+      (fileSystemUtils.zipDirectory as Mock).mockRejectedValue(new Error('Zip error'));
 
       const options: ProcessVideoOptions = {
         file: videoFile,
@@ -264,7 +262,13 @@ describe('ProcessVideoService', () => {
       vi.spyOn(fs, 'statSync').mockReturnValue({ size: 1024 * 1024 } as fs.Stats);
 
       (mockFfmpegService.extractFrames as Mock).mockResolvedValue({
-        frames: ['img_00001.jpg', 'img_00002.jpg', 'img_00003.jpg', 'img_00004.jpg', 'img_00005.jpg'],
+        frames: [
+          'img_00001.jpg',
+          'img_00002.jpg',
+          'img_00003.jpg',
+          'img_00004.jpg',
+          'img_00005.jpg',
+        ],
         outputDir: testTempDir,
       });
 
@@ -305,10 +309,17 @@ describe('ProcessVideoService', () => {
 
       // Add artificial delay in mock
       (mockFfmpegService.extractFrames as Mock).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve({
-          frames: ['img_00001.jpg'],
-          outputDir: testTempDir,
-        }), 50))
+        () =>
+          new Promise((resolve) =>
+            setTimeout(
+              () =>
+                resolve({
+                  frames: ['img_00001.jpg'],
+                  outputDir: testTempDir,
+                }),
+              50
+            )
+          )
       );
 
       const options: ProcessVideoOptions = {
@@ -318,6 +329,59 @@ describe('ProcessVideoService', () => {
       const result = await service.processVideo(options);
 
       expect(result.durationMs).toBeGreaterThanOrEqual(50);
+    });
+
+    it('should remove input file after successful processing', async () => {
+      const videoFile = 'test-video.mp4';
+      const videoPath = path.join(testInputDir, videoFile);
+
+      vi.spyOn(fileSystemUtils, 'safeJoin').mockReturnValue(videoPath);
+      vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+      vi.spyOn(fs, 'statSync').mockReturnValue({ size: 1024 * 1024 } as fs.Stats);
+
+      const options: ProcessVideoOptions = {
+        file: videoFile,
+      };
+
+      await service.processVideo(options);
+
+      expect(fileSystemUtils.removeFile).toHaveBeenCalledWith(videoPath);
+    });
+
+    it('should remove input file even when ffmpeg fails', async () => {
+      const videoFile = 'test-video.mp4';
+      const videoPath = path.join(testInputDir, videoFile);
+
+      vi.spyOn(fileSystemUtils, 'safeJoin').mockReturnValue(videoPath);
+      vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+      vi.spyOn(fs, 'statSync').mockReturnValue({ size: 1024 * 1024 } as fs.Stats);
+
+      (mockFfmpegService.extractFrames as Mock).mockRejectedValue(new Error('FFmpeg error'));
+
+      const options: ProcessVideoOptions = {
+        file: videoFile,
+      };
+
+      await expect(service.processVideo(options)).rejects.toThrow('FFmpeg error');
+      expect(fileSystemUtils.removeFile).toHaveBeenCalledWith(videoPath);
+    });
+
+    it('should remove input file even when zip fails', async () => {
+      const videoFile = 'test-video.mp4';
+      const videoPath = path.join(testInputDir, videoFile);
+
+      vi.spyOn(fileSystemUtils, 'safeJoin').mockReturnValue(videoPath);
+      vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+      vi.spyOn(fs, 'statSync').mockReturnValue({ size: 1024 * 1024 } as fs.Stats);
+
+      (fileSystemUtils.zipDirectory as Mock).mockRejectedValue(new Error('Zip error'));
+
+      const options: ProcessVideoOptions = {
+        file: videoFile,
+      };
+
+      await expect(service.processVideo(options)).rejects.toThrow('Zip error');
+      expect(fileSystemUtils.removeFile).toHaveBeenCalledWith(videoPath);
     });
   });
 });

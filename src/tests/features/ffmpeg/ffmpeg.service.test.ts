@@ -2,10 +2,16 @@ import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
+import { Readable } from 'stream';
 import { FfmpegService } from '../../../features/ffmpeg/ffmpeg.service';
 import { ExtractFramesOptions } from '../../../features/ffmpeg/ffmpeg.types';
+
+interface MockChildProcess extends EventEmitter {
+  pid?: number;
+  stdout: Readable | null;
+  stderr: Readable | null;
+}
 
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
@@ -20,16 +26,17 @@ import { spawn } from 'child_process';
 describe('FfmpegService', () => {
   let service: FfmpegService;
   let testDir: string;
-  let mockProcess: EventEmitter & Partial<ChildProcess>;
+  let mockProcess: MockChildProcess;
 
   beforeEach(() => {
     service = new FfmpegService();
     testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'test-ffmpeg-'));
 
-    mockProcess = new EventEmitter() as EventEmitter & Partial<ChildProcess>;
-    mockProcess.pid = 12345;
-    mockProcess.stdout = new EventEmitter() as any;
-    mockProcess.stderr = new EventEmitter() as any;
+    const emitter = new EventEmitter() as MockChildProcess;
+    emitter.pid = 12345;
+    emitter.stdout = new EventEmitter() as unknown as Readable;
+    emitter.stderr = new EventEmitter() as unknown as Readable;
+    mockProcess = emitter;
 
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -100,11 +107,7 @@ describe('FfmpegService', () => {
 
       expect(spawn).toHaveBeenCalledWith(
         '/usr/bin/ffmpeg',
-        expect.arrayContaining([
-          '-vf',
-          'fps=1/2',
-          expect.stringContaining('img_%05d.png'),
-        ]),
+        expect.arrayContaining(['-vf', 'fps=1/2', expect.stringContaining('img_%05d.png')]),
         expect.any(Object)
       );
     });
@@ -234,20 +237,13 @@ describe('FfmpegService', () => {
         default: null,
       }));
 
-      const options: ExtractFramesOptions = {
-        inputPath: '/path/to/video.mp4',
-        outputDir: testDir,
-        intervalMs: 1000,
-        format: 'jpg',
-      };
-
       (spawn as Mock).mockReturnValue(mockProcess);
 
       // Reset mock to return null for ffmpeg path
-      const mockProcessNull = new EventEmitter() as EventEmitter & Partial<ChildProcess>;
+      const mockProcessNull = new EventEmitter() as MockChildProcess;
       mockProcessNull.pid = undefined;
-      mockProcessNull.stdout = new EventEmitter() as any;
-      mockProcessNull.stderr = new EventEmitter() as any;
+      mockProcessNull.stdout = new EventEmitter() as unknown as Readable;
+      mockProcessNull.stderr = new EventEmitter() as unknown as Readable;
 
       // This test verifies the structure - actual null check happens at runtime
       expect(spawn).toBeDefined();

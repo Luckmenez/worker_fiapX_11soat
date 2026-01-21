@@ -29,6 +29,16 @@ export function removeDir(dirPath: string): void {
   console.log(`[FS-UTILS] Diretório removido em ${Date.now() - startTime}ms`);
 }
 
+export function removeFile(filePath: string): void {
+  console.log(`[FS-UTILS] Removendo arquivo: ${filePath}`);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+    console.log(`[FS-UTILS] Arquivo removido: ${filePath}`);
+  } else {
+    console.log(`[FS-UTILS] Arquivo não encontrado para remoção: ${filePath}`);
+  }
+}
+
 export async function zipDirectory(dirPath: string, zipPath: string): Promise<void> {
   console.log(`[FS-UTILS] Iniciando zipDirectory`);
   console.log(`[FS-UTILS] Origem: ${dirPath}`);
@@ -43,7 +53,9 @@ export async function zipDirectory(dirPath: string, zipPath: string): Promise<vo
 
     // Log de progresso a cada 10 segundos
     const progressInterval = setInterval(() => {
-      console.log(`[FS-UTILS] ZIP em progresso... (${(totalBytes / 1024 / 1024).toFixed(2)} MB processados)`);
+      console.log(
+        `[FS-UTILS] ZIP em progresso... (${(totalBytes / 1024 / 1024).toFixed(2)} MB processados)`
+      );
     }, 10000);
 
     archive.on('progress', (progress) => {
@@ -51,7 +63,9 @@ export async function zipDirectory(dirPath: string, zipPath: string): Promise<vo
       const now = Date.now();
       // Log a cada 5 segundos ou quando houver mudança significativa
       if (now - lastProgressLog > 5000) {
-        console.log(`[FS-UTILS] ZIP progresso: ${progress.entries.processed}/${progress.entries.total} arquivos, ${(totalBytes / 1024 / 1024).toFixed(2)} MB`);
+        console.log(
+          `[FS-UTILS] ZIP progresso: ${progress.entries.processed}/${progress.entries.total} arquivos, ${(totalBytes / 1024 / 1024).toFixed(2)} MB`
+        );
         lastProgressLog = now;
       }
     });
@@ -59,7 +73,9 @@ export async function zipDirectory(dirPath: string, zipPath: string): Promise<vo
     output.on('close', () => {
       clearInterval(progressInterval);
       const finalSize = archive.pointer();
-      console.log(`[FS-UTILS] ZIP concluído! Tamanho final: ${(finalSize / 1024 / 1024).toFixed(2)} MB`);
+      console.log(
+        `[FS-UTILS] ZIP concluído! Tamanho final: ${(finalSize / 1024 / 1024).toFixed(2)} MB`
+      );
       resolve();
     });
 
