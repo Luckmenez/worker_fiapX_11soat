@@ -4,7 +4,14 @@ import { inject, injectable } from 'tsyringe';
 import { IProcessVideoService } from './process-video.service.interface';
 import { IFfmpegService } from '../ffmpeg/ffmpeg.service.interface';
 import { ProcessVideoOptions, ProcessVideoResult } from '../../@types/process-video.types';
-import { safeJoin, createTempDir, removeDir, zipDirectory, ensureDir } from '../../shared/utils';
+import {
+  safeJoin,
+  createTempDir,
+  removeDir,
+  removeFile,
+  zipDirectory,
+  ensureDir,
+} from '../../shared/utils';
 
 const INPUT_DIR = path.resolve('./input');
 const OUTPUT_DIR = path.resolve('./output');
@@ -82,6 +89,8 @@ export class ProcessVideoService implements IProcessVideoService {
     } finally {
       console.log(`[SERVICE] [CLEANUP] Removendo diretório temporário: ${tmpDir}`);
       removeDir(tmpDir);
+      console.log(`[SERVICE] [CLEANUP] Removendo arquivo de input: ${inputPath}`);
+      removeFile(inputPath);
       console.log(`[SERVICE] [CLEANUP] Limpeza concluída`);
     }
   }

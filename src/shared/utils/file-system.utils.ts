@@ -29,6 +29,16 @@ export function removeDir(dirPath: string): void {
   console.log(`[FS-UTILS] Diretório removido em ${Date.now() - startTime}ms`);
 }
 
+export function removeFile(filePath: string): void {
+  console.log(`[FS-UTILS] Removendo arquivo: ${filePath}`);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+    console.log(`[FS-UTILS] Arquivo removido: ${filePath}`);
+  } else {
+    console.log(`[FS-UTILS] Arquivo não encontrado para remoção: ${filePath}`);
+  }
+}
+
 export async function zipDirectory(dirPath: string, zipPath: string): Promise<void> {
   console.log(`[FS-UTILS] Iniciando zipDirectory`);
   console.log(`[FS-UTILS] Origem: ${dirPath}`);
