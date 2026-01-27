@@ -1,17 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import path from 'path';
 
 type FileFilterCallback = (err: Error | null, accept?: boolean) => void;
 type FileFilterFn = (req: unknown, file: { mimetype: string }, cb: FileFilterCallback) => void;
+type FilenameCallback = (error: Error | null, filename: string) => void;
+
+interface MulterStorage {
+  getFilename: (req: unknown, file: { originalname: string }, cb: FilenameCallback) => void;
+}
 
 interface MulterInstance {
-  storage: {
-    _handleFile: (
-      req: unknown,
-      file: { originalname: string },
-      cb: (err: Error | null, info?: { filename: string }) => void
-    ) => void;
-  };
+  storage: MulterStorage;
   fileFilter: FileFilterFn;
   limits: { fileSize: number };
 }
@@ -43,26 +41,15 @@ describe('multer.config', () => {
         originalname: 'test-video.mp4',
       };
 
-      const filename = await new Promise<string>((resolve) => {
-        storage._handleFile(mockReq, mockFile, (err: Error | null, info?: { filename: string }) => {
-          if (err) {
-            // If _handleFile doesn't work directly, test the filename generator
-            const dateNow = Date.now();
-            const randomNum = Math.round(Math.random() * 1e9);
-            const ext = path.extname(mockFile.originalname);
-            const name = path.basename(mockFile.originalname, ext);
-            resolve(`${name}-${dateNow}-${randomNum}${ext}`);
-          } else {
-            resolve(info?.filename || 'generated-filename');
-          }
+      const filename = await new Promise<string>((resolve, reject) => {
+        storage.getFilename(mockReq, mockFile, (err: Error | null, filename: string) => {
+          if (err) reject(err);
+          else resolve(filename);
         });
-      }).catch(() => {
-        // Fallback: verify expected pattern
-        return 'test-video-1234567890-123456789.mp4';
       });
 
-      expect(filename).toMatch(/test-video/);
-      expect(filename).toMatch(/\.mp4$/);
+      // Verify filename follows pattern: name-timestamp-random.ext
+      expect(filename).toMatch(/^test-video-\d+-\d+\.mp4$/);
     });
   });
 
