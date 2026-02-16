@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 import { ProcessVideoService } from '../../../features/process-video/process-video.service';
 import { IFfmpegService } from '../../../features/ffmpeg/ffmpeg.service.interface';
+import { RabbitMQQueueService } from '../../../infrastructure/broker/rabbitmq-queue.service';
 import { ProcessVideoOptions } from '../../../@types/process-video.types';
 import * as fileSystemUtils from '../../../shared/utils/file-system.utils';
 
@@ -22,6 +23,7 @@ vi.mock('../../../shared/utils/file-system.utils', async () => {
 describe('ProcessVideoService', () => {
   let service: ProcessVideoService;
   let mockFfmpegService: IFfmpegService;
+  let mockQueueService: RabbitMQQueueService;
   let testInputDir: string;
   let testOutputDir: string;
   let testTempDir: string;
@@ -38,6 +40,11 @@ describe('ProcessVideoService', () => {
       }),
     };
 
+    mockQueueService = {
+      publishVideoCompleted: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    } as unknown as RabbitMQQueueService;
+
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -47,7 +54,7 @@ describe('ProcessVideoService', () => {
     (fileSystemUtils.zipDirectory as Mock).mockResolvedValue(undefined);
     (fileSystemUtils.ensureDir as Mock).mockImplementation(() => {});
 
-    service = new ProcessVideoService(mockFfmpegService);
+    service = new ProcessVideoService(mockFfmpegService, mockQueueService);
   });
 
   afterEach(() => {
