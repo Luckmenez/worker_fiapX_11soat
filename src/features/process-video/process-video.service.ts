@@ -3,6 +3,7 @@ import fs from 'fs';
 import { inject, injectable } from 'tsyringe';
 import { IProcessVideoService } from './process-video.service.interface';
 import { IFfmpegService } from '../ffmpeg/ffmpeg.service.interface';
+import { RabbitMQQueueService } from '../../infrastructure/broker/rabbitmq-queue.service';
 import { ProcessVideoOptions, ProcessVideoResult } from '../../@types/process-video.types';
 import {
   safeJoin,
@@ -20,7 +21,9 @@ const OUTPUT_DIR = path.resolve('./output');
 export class ProcessVideoService implements IProcessVideoService {
   constructor(
     @inject('FfmpegService')
-    private readonly ffmpegService: IFfmpegService
+    private readonly ffmpegService: IFfmpegService,
+    @inject('RabbitMQQueueService')
+    private readonly queueService: RabbitMQQueueService
   ) {
     ensureDir(INPUT_DIR);
     ensureDir(OUTPUT_DIR);
@@ -29,22 +32,18 @@ export class ProcessVideoService implements IProcessVideoService {
   async processVideo(options: ProcessVideoOptions): Promise<ProcessVideoResult> {
     const { file, intervalMs = 1000, format = 'jpg' } = options;
 
-    console.log(`[SERVICE] Iniciando processVideo para: ${file}`);
-    console.log(`[SERVICE] Configuração: intervalMs=${intervalMs}ms, format=${format}`);
-
     const inputPath = safeJoin(INPUT_DIR, file);
-    console.log(`[SERVICE] Caminho do input: ${inputPath}`);
 
     if (!fs.existsSync(inputPath)) {
-      console.error(`[SERVICE] ERRO: Arquivo não encontrado: ${inputPath}`);
       throw new Error(`Arquivo de vídeo não encontrado: ${inputPath}`);
     }
 
     const fileStats = fs.statSync(inputPath);
-    console.log(`[SERVICE] Tamanho do arquivo: ${(fileStats.size / 1024 / 1024).toFixed(2)} MB`);
+    console.log(
+      `[SERVICE] Iniciando processamento do vídeo: ${file} (${(fileStats.size / 1e6).toFixed(2)} MB)`
+    );
 
     const tmpDir = createTempDir('frames-');
-    console.log(`[SERVICE] Diretório temporário criado: ${tmpDir}`);
 
     const startedAt = Date.now();
 
@@ -76,6 +75,12 @@ export class ProcessVideoService implements IProcessVideoService {
       const durationMs = Date.now() - startedAt;
       console.log(`[SERVICE] [STEP 3/3] Processo completo em ${durationMs}ms`);
 
+      await this.queueService.publishVideoCompleted({
+        jobId: baseName,
+        status: 'COMPLETED',
+        framesExtracted: frames.length,
+      });
+
       return {
         ok: true,
         input: file,
@@ -86,10 +91,16 @@ export class ProcessVideoService implements IProcessVideoService {
         zipPath,
         durationMs,
       };
+    } catch (error) {
+      await this.queueService.publishVideoCompleted({
+        jobId: path.parse(file).name,
+        status: 'FAILED',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      throw error;
     } finally {
-      console.log(`[SERVICE] [CLEANUP] Removendo diretório temporário: ${tmpDir}`);
       removeDir(tmpDir);
-      console.log(`[SERVICE] [CLEANUP] Removendo arquivo de input: ${inputPath}`);
       removeFile(inputPath);
       console.log(`[SERVICE] [CLEANUP] Limpeza concluída`);
     }
