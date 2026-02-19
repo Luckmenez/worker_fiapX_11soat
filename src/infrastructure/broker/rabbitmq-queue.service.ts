@@ -1,6 +1,7 @@
 import { injectable } from 'tsyringe';
 import { rabbitmqClient } from './broker.gateway';
 import { VideoCompletedMessageDTO } from './broker.types';
+import { logRabbitMQ, logError } from '../monitoring';
 
 @injectable()
 export class RabbitMQQueueService {
@@ -23,7 +24,8 @@ export class RabbitMQQueueService {
 
       // const duration = Date.now() - startTime;
 
-      console.log(`[RabbitMQ] Message published to ${queue}:`, {
+      logRabbitMQ('publish.completed', `Message published to ${queue}`, {
+        queue,
         jobId: message.jobId,
         status: message.status,
         framesExtracted: message.framesExtracted,
@@ -31,7 +33,7 @@ export class RabbitMQQueueService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-      console.error('[RabbitMQ] Failed to publish message:', errorMessage);
+      logError(error, 'RabbitMQQueueService.publishVideoCompleted', { message });
 
       throw new Error(`RabbitMQ unavailable: ${errorMessage}`);
     }

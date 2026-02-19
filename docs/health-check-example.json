@@ -1,0 +1,200 @@
+{
+  "basic": {
+    "endpoint": "GET /health",
+    "description": "Basic health check - quick status without dependency checks",
+    "response": {
+      "status": "ok",
+      "timestamp": "2026-02-18T01:30:00.000Z",
+      "service": "worker-fiapx-11soat",
+      "uptime": 3600.5,
+      "environment": "production"
+    }
+  },
+  "detailed_healthy": {
+    "endpoint": "GET /health/detailed",
+    "description": "Detailed health check - all services healthy",
+    "httpStatus": 200,
+    "response": {
+      "status": "healthy",
+      "timestamp": "2026-02-18T01:30:00.000Z",
+      "services": {
+        "s3": {
+          "status": "ok",
+          "responseTime": 145,
+          "details": {
+            "bucket": "fiapx-storage-78a916d3",
+            "bucketExists": true,
+            "region": "us-east-1"
+          }
+        },
+        "rabbitmq": {
+          "status": "ok",
+          "responseTime": 89,
+          "details": {
+            "queues": {
+              "video": {
+                "name": "video.processing",
+                "exists": true,
+                "messages": 5
+              },
+              "batch": {
+                "name": "batch.video.processing",
+                "exists": true,
+                "messages": 2
+              },
+              "dlq": {
+                "name": "video.processing.dlq",
+                "exists": true,
+                "messages": 0
+              }
+            }
+          }
+        },
+        "elasticsearch": {
+          "status": "ok",
+          "responseTime": 23,
+          "details": {
+            "clusterName": "docker-cluster",
+            "clusterStatus": "green",
+            "numberOfNodes": 1,
+            "activeShards": 5
+          }
+        },
+        "ffmpeg": {
+          "status": "ok",
+          "responseTime": 67,
+          "details": {
+            "version": "6.0",
+            "available": true
+          }
+        }
+      },
+      "uptime": 3600.5,
+      "version": "1.0.0",
+      "environment": "production"
+    }
+  },
+  "detailed_degraded": {
+    "endpoint": "GET /health/detailed",
+    "description": "Detailed health check - optional service (Elasticsearch) down",
+    "httpStatus": 200,
+    "response": {
+      "status": "degraded",
+      "timestamp": "2026-02-18T01:30:00.000Z",
+      "services": {
+        "s3": {
+          "status": "ok",
+          "responseTime": 145,
+          "details": {
+            "bucket": "fiapx-storage-78a916d3",
+            "bucketExists": true,
+            "region": "us-east-1"
+          }
+        },
+        "rabbitmq": {
+          "status": "ok",
+          "responseTime": 89
+        },
+        "elasticsearch": {
+          "status": "error",
+          "error": "Connection timeout",
+          "details": {
+            "host": "localhost",
+            "port": "9200"
+          }
+        },
+        "ffmpeg": {
+          "status": "ok",
+          "responseTime": 67
+        }
+      },
+      "uptime": 3600.5,
+      "version": "1.0.0",
+      "environment": "production"
+    }
+  },
+  "detailed_unhealthy": {
+    "endpoint": "GET /health/detailed",
+    "description": "Detailed health check - critical service (S3) down",
+    "httpStatus": 503,
+    "response": {
+      "status": "unhealthy",
+      "timestamp": "2026-02-18T01:30:00.000Z",
+      "services": {
+        "s3": {
+          "status": "error",
+          "error": "CredentialsProviderError: Could not load credentials",
+          "details": {
+            "bucket": "fiapx-storage-78a916d3",
+            "region": "us-east-1"
+          }
+        },
+        "rabbitmq": {
+          "status": "error",
+          "error": "ECONNREFUSED: Connection refused"
+        },
+        "elasticsearch": {
+          "status": "disabled",
+          "details": {
+            "enabled": false,
+            "reason": "ELASTICSEARCH_ENABLED is not set to true"
+          }
+        },
+        "ffmpeg": {
+          "status": "ok",
+          "responseTime": 67,
+          "details": {
+            "version": "6.0",
+            "available": true
+          }
+        }
+      },
+      "uptime": 3600.5,
+      "version": "1.0.0",
+      "environment": "production"
+    }
+  },
+  "readiness_ready": {
+    "endpoint": "GET /health/readiness",
+    "description": "Readiness probe - pod is ready to receive traffic",
+    "httpStatus": 200,
+    "response": {
+      "status": "ready",
+      "timestamp": "2026-02-18T01:30:00.000Z"
+    }
+  },
+  "readiness_not_ready": {
+    "endpoint": "GET /health/readiness",
+    "description": "Readiness probe - pod is NOT ready (S3 down)",
+    "httpStatus": 503,
+    "response": {
+      "status": "not-ready",
+      "timestamp": "2026-02-18T01:30:00.000Z",
+      "services": {
+        "s3": {
+          "status": "error",
+          "error": "Connection timeout"
+        },
+        "rabbitmq": {
+          "status": "ok"
+        },
+        "elasticsearch": {
+          "status": "ok"
+        },
+        "ffmpeg": {
+          "status": "ok"
+        }
+      }
+    }
+  },
+  "liveness": {
+    "endpoint": "GET /health/liveness",
+    "description": "Liveness probe - process is alive",
+    "httpStatus": 200,
+    "response": {
+      "status": "alive",
+      "timestamp": "2026-02-18T01:30:00.000Z",
+      "uptime": 3600.5
+    }
+  }
+}

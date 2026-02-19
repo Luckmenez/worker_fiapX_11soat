@@ -14,28 +14,54 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProcessVideoController = void 0;
 const tsyringe_1 = require("tsyringe");
+const monitoring_1 = require("../../infrastructure/monitoring");
+const MIN_INTERVAL_MS = 100;
+const MAX_INTERVAL_MS = 60000;
+const DEFAULT_INTERVAL_MS = 1000;
 let ProcessVideoController = class ProcessVideoController {
     service;
     constructor(service) {
         this.service = service;
     }
     async process(req, res) {
+        const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        monitoring_1.logger.info({ type: 'controller.request', requestId }, 'Request received');
+        monitoring_1.logger.info({ type: 'controller.file', requestId, fileName: req.file?.filename, fileSize: req.file?.size }, 'File uploaded');
         try {
             if (!req.file) {
+                monitoring_1.logger.warn({ type: 'controller.error', requestId }, 'No file provided');
                 res.status(400).json({ error: 'No video file provided' });
                 return;
             }
-            const framesPerSecond = Number(req.body.frames_per_second || 1);
+            const intervalMs = Number(req.body.interval_ms || DEFAULT_INTERVAL_MS);
             const format = String(req.body.format || 'jpg').toLowerCase();
+            if (intervalMs < MIN_INTERVAL_MS || intervalMs > MAX_INTERVAL_MS) {
+                monitoring_1.logger.warn({ type: 'controller.error', requestId }, 'interval_ms out of range');
+                res.status(400).json({
+                    error: `interval_ms must be between ${MIN_INTERVAL_MS} and ${MAX_INTERVAL_MS}`,
+                });
+                return;
+            }
+            monitoring_1.logger.info({ type: 'controller.params', requestId, intervalMs, format }, 'Processing parameters');
+            monitoring_1.logger.info({ type: 'controller.processing', requestId }, 'Starting processing');
+            const startTime = Date.now();
+            // For direct HTTP upload (not via RabbitMQ), use default values
+            const jobId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const outputS3Prefix = 'output/local';
             const result = await this.service.processVideo({
                 file: req.file.filename,
-                framesPerSecond,
+                intervalMs,
                 format,
+                jobId,
+                outputS3Prefix,
             });
+            monitoring_1.logger.info({ type: 'controller.completed', requestId, durationMs: Date.now() - startTime }, 'Processing completed');
+            monitoring_1.logger.info({ type: 'controller.result', requestId, frames: result.frames }, `${result.frames} frames extracted`);
             res.json(result);
         }
         catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
+            (0, monitoring_1.logError)(error, 'ProcessVideoController', { requestId });
             res.status(500).json({ error: message });
         }
     }

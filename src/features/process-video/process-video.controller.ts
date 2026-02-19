@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { inject, injectable } from 'tsyringe';
 import { IProcessVideoService } from './process-video.service.interface';
+import { logger, logError } from '../../infrastructure/monitoring';
 
 interface ProcessVideoBody {
   interval_ms?: string;
@@ -20,14 +21,12 @@ export class ProcessVideoController {
 
   async process(req: Request<object, object, ProcessVideoBody>, res: Response): Promise<void> {
     const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    console.log(`[${requestId}] [CONTROLLER] Requisição recebida`);
-    console.log(
-      `[${requestId}] [CONTROLLER] File: ${req.file?.filename || 'N/A'}, Size: ${req.file?.size || 0} bytes`
-    );
+    logger.info({ type: 'controller.request', requestId }, 'Request received');
+    logger.info({ type: 'controller.file', requestId, fileName: req.file?.filename, fileSize: req.file?.size }, 'File uploaded');
 
     try {
       if (!req.file) {
-        console.log(`[${requestId}] [CONTROLLER] Erro: Nenhum arquivo enviado`);
+        logger.warn({ type: 'controller.error', requestId }, 'No file provided');
         res.status(400).json({ error: 'No video file provided' });
         return;
       }
@@ -36,38 +35,38 @@ export class ProcessVideoController {
       const format = String(req.body.format || 'jpg').toLowerCase() as 'jpg' | 'png';
 
       if (intervalMs < MIN_INTERVAL_MS || intervalMs > MAX_INTERVAL_MS) {
-        console.log(`[${requestId}] [CONTROLLER] Erro: interval_ms fora do range permitido`);
+        logger.warn({ type: 'controller.error', requestId }, 'interval_ms out of range');
         res.status(400).json({
           error: `interval_ms must be between ${MIN_INTERVAL_MS} and ${MAX_INTERVAL_MS}`,
         });
         return;
       }
 
-      console.log(
-        `[${requestId}] [CONTROLLER] Parâmetros: intervalMs=${intervalMs}ms, format=${format}`
-      );
-      console.log(`[${requestId}] [CONTROLLER] Iniciando processamento...`);
+      logger.info({ type: 'controller.params', requestId, intervalMs, format }, 'Processing parameters');
+      logger.info({ type: 'controller.processing', requestId }, 'Starting processing');
 
       const startTime = Date.now();
+
+      // For direct HTTP upload (not via RabbitMQ), use default values
+      const jobId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const outputS3Prefix = 'output/local';
+
       const result = await this.service.processVideo({
         file: req.file.filename,
         intervalMs,
         format,
+        jobId,
+        outputS3Prefix,
       });
 
-      console.log(
-        `[${requestId}] [CONTROLLER] Processamento concluído em ${Date.now() - startTime}ms`
-      );
-      console.log(`[${requestId}] [CONTROLLER] Resultado: ${result.frames} frames extraídos`);
+      logger.info({ type: 'controller.completed', requestId, durationMs: Date.now() - startTime }, 'Processing completed');
+      logger.info({ type: 'controller.result', requestId, frames: result.frames }, `${result.frames} frames extracted`);
 
       res.json(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`[${requestId}] [CONTROLLER] ERRO: ${message}`);
-      console.error(
-        `[${requestId}] [CONTROLLER] Stack:`,
-        error instanceof Error ? error.stack : 'N/A'
-      );
+      logError(error, 'ProcessVideoController', { requestId });
+      
       res.status(500).json({ error: message });
     }
   }
