@@ -354,7 +354,6 @@ describe('ProcessVideoService', () => {
       vi.spyOn(fs, 'existsSync').mockReturnValue(true);
       vi.spyOn(fs, 'statSync').mockReturnValue({ size: 1024 * 1024 } as fs.Stats);
 
-      // Add artificial delay in mock
       (mockFfmpegService.extractFrames as Mock).mockImplementation(
         () =>
           new Promise((resolve) =>

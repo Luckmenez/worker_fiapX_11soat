@@ -16,25 +16,19 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Health check routes
 app.use('/health', healthRoutes);
-
-// Video processing routes
 app.use('/videos', processVideoRoutes);
 
 async function bootstrap(): Promise<void> {
   try {
     await rabbitmqClient.connect();
 
-    // Start single video processing consumer
     await startVideoProcessingConsumer();
     logRabbitMQ('bootstrap', 'Video processing consumer started');
 
-    // Start batch video processing consumer
     await startBatchVideoProcessingConsumer();
     logRabbitMQ('bootstrap', 'Batch video processing consumer started');
 
-    // Start dead letter consumer (handles failed messages after max retries)
     await startDeadLetterConsumer();
     logRabbitMQ('bootstrap', 'Dead Letter Queue consumer started');
 

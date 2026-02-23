@@ -6,7 +6,6 @@ import { logRabbitMQ, logError } from '../monitoring';
 @injectable()
 export class RabbitMQQueueService {
   async publishVideoCompleted(message: VideoCompletedMessageDTO): Promise<void> {
-    // const startTime = Date.now();
     try {
       const channel = await rabbitmqClient.getChannel();
       const queue = process.env.VIDEO_COMPLETED_QUEUE || 'video.completed';
@@ -21,8 +20,6 @@ export class RabbitMQQueueService {
       if (!sent) {
         throw new Error('Failed to send message to queue (buffer full)');
       }
-
-      // const duration = Date.now() - startTime;
 
       logRabbitMQ('publish.completed', `Message published to ${queue}`, {
         queue,

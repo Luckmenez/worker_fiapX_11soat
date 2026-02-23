@@ -51,7 +51,6 @@ export async function zipDirectory(dirPath: string, zipPath: string): Promise<vo
     let lastProgressLog = Date.now();
     let totalBytes = 0;
 
-    // Log de progresso a cada 10 segundos
     const progressInterval = setInterval(() => {
       console.log(
         `[FS-UTILS] ZIP em progresso... (${(totalBytes / 1024 / 1024).toFixed(2)} MB processados)`
@@ -61,7 +60,6 @@ export async function zipDirectory(dirPath: string, zipPath: string): Promise<vo
     archive.on('progress', (progress) => {
       totalBytes = progress.fs.processedBytes;
       const now = Date.now();
-      // Log a cada 5 segundos ou quando houver mudança significativa
       if (now - lastProgressLog > 5000) {
         console.log(
           `[FS-UTILS] ZIP progresso: ${progress.entries.processed}/${progress.entries.total} arquivos, ${(totalBytes / 1024 / 1024).toFixed(2)} MB`

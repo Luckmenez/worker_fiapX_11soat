@@ -81,30 +81,23 @@ class RabbitMQClient {
       throw new Error('Channel not available');
     }
 
-    // Dead Letter Exchange (DLX) e Dead Letter Queue (DLQ)
     const dlxName = 'video.processing.dlx';
     const dlqName = 'video.processing.dlq';
 
-    // 1. Criar Dead Letter Exchange
     await this.channel.assertExchange(dlxName, 'direct', { durable: true });
 
-    // 2. Criar Dead Letter Queue (onde as mensagens falhas vão parar)
     await this.channel.assertQueue(dlqName, {
       durable: true,
     });
 
-    // 3. Bind DLQ ao DLX
     await this.channel.bindQueue(dlqName, dlxName, 'failed');
 
-    // 4. Filas principais com DLX configurado
-    // Video Processing Queue - com retry máximo de 2x
     await this.channel.assertQueue(process.env.VIDEO_PROCESSING_QUEUE || 'video.processing', {
       durable: true,
       deadLetterExchange: dlxName,
       deadLetterRoutingKey: 'failed',
     });
 
-    // Batch Video Processing Queue - com retry máximo de 2x
     await this.channel.assertQueue(
       process.env.BATCH_VIDEO_PROCESSING_QUEUE || 'batch.video.processing',
       {
@@ -114,7 +107,6 @@ class RabbitMQClient {
       }
     );
 
-    // Video Completed Queue (sem DLX pois é apenas notificação)
     await this.channel.assertQueue(process.env.VIDEO_COMPLETED_QUEUE || 'video.completed', {
       durable: true,
     });

@@ -9,9 +9,6 @@ const elasticsearchEnabled =
   process.env.ELASTICSEARCH_HOST &&
   process.env.ELASTICSEARCH_PORT;
 
-/**
- * Create Pino logger with Elasticsearch integration
- */
 function createLogger() {
   const baseConfig: pino.LoggerOptions = {
     level: process.env.LOG_LEVEL || 'info',
@@ -27,7 +24,6 @@ function createLogger() {
     },
   };
 
-  // Development: pretty print to console
   if (isDevelopment && !elasticsearchEnabled) {
     return pino({
       ...baseConfig,
@@ -43,7 +39,6 @@ function createLogger() {
     });
   }
 
-  // Production with Elasticsearch
   if (elasticsearchEnabled) {
     const elasticsearchUrl = `http://${process.env.ELASTICSEARCH_HOST}:${process.env.ELASTICSEARCH_PORT}`;
 
@@ -55,29 +50,22 @@ function createLogger() {
       'es-version': 8,
     });
 
-    const streams: pino.StreamEntry[] = [
-      { stream: streamToElasticsearch },
-    ];
+    const streams: pino.StreamEntry[] = [{ stream: streamToElasticsearch }];
 
-    // Also log to console in production for debugging
     if (isDevelopment) {
       streams.push({
-        stream: pino.destination(1), // stdout
+        stream: pino.destination(1),
       });
     }
 
     return pino(baseConfig, pino.multistream(streams));
   }
 
-  // Fallback: simple console logging
   return pino(baseConfig);
 }
 
 export const logger = createLogger();
 
-/**
- * Log helper for video processing
- */
 export function logVideoProcessing(
   videoId: string,
   step: string,
@@ -95,9 +83,6 @@ export function logVideoProcessing(
   );
 }
 
-/**
- * Log helper for batch processing
- */
 export function logBatchProcessing(
   batchId: string,
   message: string,
@@ -113,9 +98,6 @@ export function logBatchProcessing(
   );
 }
 
-/**
- * Log helper for S3 operations
- */
 export function logS3Operation(
   operation: string,
   message: string,
@@ -131,9 +113,6 @@ export function logS3Operation(
   );
 }
 
-/**
- * Log helper for RabbitMQ operations
- */
 export function logRabbitMQ(
   operation: string,
   message: string,
@@ -149,14 +128,7 @@ export function logRabbitMQ(
   );
 }
 
-/**
- * Log helper for FFmpeg operations
- */
-export function logFFmpeg(
-  videoId: string,
-  message: string,
-  metadata?: Record<string, unknown>
-) {
+export function logFFmpeg(videoId: string, message: string, metadata?: Record<string, unknown>) {
   logger.info(
     {
       type: 'ffmpeg.operation',
@@ -167,9 +139,6 @@ export function logFFmpeg(
   );
 }
 
-/**
- * Log error with context
- */
 export function logError(
   error: Error | unknown,
   context: string,

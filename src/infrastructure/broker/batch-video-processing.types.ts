@@ -1,9 +1,3 @@
-/**
- * Batch Video Processing DTOs
- *
- * Estrutura para processamento de múltiplos vídeos em lote
- */
-
 export interface PersonDTO {
   clientId: string;
   name: string;
@@ -15,8 +9,8 @@ export interface VideoJobDTO {
   id_processamento: string;
   framesPerSecond: number;
   format: 'jpg' | 'png';
-  input_url: string; // s3://bucket/path/to/input/
-  output_url: string; // s3://bucket/path/to/output/
+  input_url: string;
+  output_url: string;
 }
 
 export interface BatchVideoProcessingMessageDTO {
@@ -24,10 +18,6 @@ export interface BatchVideoProcessingMessageDTO {
   videos: VideoJobDTO[];
 }
 
-/**
- * Individual video processing message
- * Used internally to process each video from the batch
- */
 export interface IndividualVideoProcessingDTO {
   videoId: string;
   processingId: string;

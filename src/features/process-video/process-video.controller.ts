@@ -22,7 +22,15 @@ export class ProcessVideoController {
   async process(req: Request<object, object, ProcessVideoBody>, res: Response): Promise<void> {
     const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     logger.info({ type: 'controller.request', requestId }, 'Request received');
-    logger.info({ type: 'controller.file', requestId, fileName: req.file?.filename, fileSize: req.file?.size }, 'File uploaded');
+    logger.info(
+      {
+        type: 'controller.file',
+        requestId,
+        fileName: req.file?.filename,
+        fileSize: req.file?.size,
+      },
+      'File uploaded'
+    );
 
     try {
       if (!req.file) {
@@ -42,12 +50,14 @@ export class ProcessVideoController {
         return;
       }
 
-      logger.info({ type: 'controller.params', requestId, intervalMs, format }, 'Processing parameters');
+      logger.info(
+        { type: 'controller.params', requestId, intervalMs, format },
+        'Processing parameters'
+      );
       logger.info({ type: 'controller.processing', requestId }, 'Starting processing');
 
       const startTime = Date.now();
 
-      // For direct HTTP upload (not via RabbitMQ), use default values
       const jobId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const outputS3Prefix = 'output/local';
 
@@ -59,14 +69,20 @@ export class ProcessVideoController {
         outputS3Prefix,
       });
 
-      logger.info({ type: 'controller.completed', requestId, durationMs: Date.now() - startTime }, 'Processing completed');
-      logger.info({ type: 'controller.result', requestId, frames: result.frames }, `${result.frames} frames extracted`);
+      logger.info(
+        { type: 'controller.completed', requestId, durationMs: Date.now() - startTime },
+        'Processing completed'
+      );
+      logger.info(
+        { type: 'controller.result', requestId, frames: result.frames },
+        `${result.frames} frames extracted`
+      );
 
       res.json(result);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logError(error, 'ProcessVideoController', { requestId });
-      
+
       res.status(500).json({ error: message });
     }
   }

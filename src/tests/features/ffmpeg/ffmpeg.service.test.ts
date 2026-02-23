@@ -63,7 +63,6 @@ describe('FfmpegService', () => {
 
       const extractPromise = service.extractFrames(options);
 
-      // Simulate successful ffmpeg execution
       setTimeout(() => {
         mockProcess.emit('close', 0);
       }, 10);
@@ -145,7 +144,6 @@ describe('FfmpegService', () => {
         format: 'jpg',
       };
 
-      // Create fake frame files
       fs.writeFileSync(path.join(testDir, 'img_00001.jpg'), 'fake');
       fs.writeFileSync(path.join(testDir, 'img_00002.jpg'), 'fake');
       fs.writeFileSync(path.join(testDir, 'img_00003.jpg'), 'fake');
@@ -173,7 +171,6 @@ describe('FfmpegService', () => {
         format: 'jpg',
       };
 
-      // Create mixed files
       fs.writeFileSync(path.join(testDir, 'img_00001.jpg'), 'fake');
       fs.writeFileSync(path.join(testDir, 'img_00002.png'), 'fake'); // Different format
       fs.writeFileSync(path.join(testDir, 'other_file.jpg'), 'fake'); // Different prefix
@@ -239,13 +236,11 @@ describe('FfmpegService', () => {
 
       (spawn as Mock).mockReturnValue(mockProcess);
 
-      // Reset mock to return null for ffmpeg path
       const mockProcessNull = new EventEmitter() as MockChildProcess;
       mockProcessNull.pid = undefined;
       mockProcessNull.stdout = new EventEmitter() as unknown as Readable;
       mockProcessNull.stderr = new EventEmitter() as unknown as Readable;
 
-      // This test verifies the structure - actual null check happens at runtime
       expect(spawn).toBeDefined();
     });
 
@@ -257,7 +252,6 @@ describe('FfmpegService', () => {
         format: 'jpg',
       };
 
-      // Create frames out of order
       fs.writeFileSync(path.join(testDir, 'img_00003.jpg'), 'fake');
       fs.writeFileSync(path.join(testDir, 'img_00001.jpg'), 'fake');
       fs.writeFileSync(path.join(testDir, 'img_00002.jpg'), 'fake');

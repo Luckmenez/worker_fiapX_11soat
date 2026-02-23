@@ -9,11 +9,6 @@ import { logRabbitMQ, logError } from '../monitoring';
 const DLQ_NAME = 'video.processing.dlq';
 const MAX_RETRY_COUNT = 2;
 
-/**
- * Consumer para Dead Letter Queue
- * Processa mensagens que falharam após MAX_RETRY_COUNT tentativas
- * Envia notificação por e-mail para o usuário informando a falha
- */
 export async function startDeadLetterConsumer(): Promise<void> {
   try {
     const channel = await rabbitmqClient.getChannel();
@@ -21,7 +16,6 @@ export async function startDeadLetterConsumer(): Promise<void> {
 
     logRabbitMQ('dlq.consumer.starting', `Starting DLQ consumer: ${DLQ_NAME}`);
 
-    // Prefetch 1 para processar uma mensagem de cada vez
     await channel.prefetch(1);
 
     channel.consume(
@@ -40,7 +34,6 @@ export async function startDeadLetterConsumer(): Promise<void> {
         });
 
         try {
-          // Tentar parsear como BatchVideoProcessingMessage primeiro
           let payload: BatchVideoProcessingMessageDTO | VideoProcessingMessageDTO;
 
           try {
@@ -49,18 +42,14 @@ export async function startDeadLetterConsumer(): Promise<void> {
             payload = JSON.parse(content) as VideoProcessingMessageDTO;
           }
 
-          // Verificar se é batch ou individual
           if ('videos' in payload && 'person' in payload) {
-            // Batch processing falhou
             await handleBatchProcessingFailure(emailService, payload, retryCount);
           } else if ('jobId' in payload) {
-            // Individual processing falhou
             await handleIndividualProcessingFailure(emailService, payload, retryCount);
           } else {
             logError(new Error('Unknown message format'), 'DLQ.Consumer', { content });
           }
 
-          // ACK a mensagem após processar
           channel.ack(msg);
 
           logRabbitMQ('dlq.message.processed', 'DLQ message processed and ACKed', {
@@ -69,8 +58,6 @@ export async function startDeadLetterConsumer(): Promise<void> {
         } catch (error) {
           logError(error, 'DLQ.Consumer', { content, retryCount });
 
-          // NACK sem requeue - mensagem vai ser descartada
-          // Não queremos reprocessar indefinidamente
           channel.nack(msg, false, false);
 
           logRabbitMQ('dlq.message.nacked', 'DLQ message NACKed (discarded)', {
@@ -79,7 +66,7 @@ export async function startDeadLetterConsumer(): Promise<void> {
         }
       },
       {
-        noAck: false, // Manual ACK
+        noAck: false,
       }
     );
 
@@ -90,9 +77,6 @@ export async function startDeadLetterConsumer(): Promise<void> {
   }
 }
 
-/**
- * Trata falha de processamento em batch
- */
 async function handleBatchProcessingFailure(
   emailService: IEmailService,
   payload: BatchVideoProcessingMessageDTO,
@@ -106,7 +90,6 @@ async function handleBatchProcessingFailure(
     retryCount,
   });
 
-  // Enviar e-mail informando falha no processamento do lote
   const videoIds = videos.map((v) => v.id).join(', ');
   const firstVideo = videos[0];
 
@@ -124,22 +107,20 @@ async function handleBatchProcessingFailure(
   });
 }
 
-/**
- * Trata falha de processamento individual
- */
 async function handleIndividualProcessingFailure(
   emailService: IEmailService,
   payload: VideoProcessingMessageDTO,
   retryCount: number
 ): Promise<void> {
-  logRabbitMQ('dlq.individual.failure', `Individual processing failed after ${retryCount} attempts`, {
-    jobId: payload.jobId,
-    retryCount,
-  });
+  logRabbitMQ(
+    'dlq.individual.failure',
+    `Individual processing failed after ${retryCount} attempts`,
+    {
+      jobId: payload.jobId,
+      retryCount,
+    }
+  );
 
-  // Para processamento individual, precisamos buscar o e-mail do usuário
-  // Como não temos no payload, vamos logar o erro
-  // Na prática, o payload deveria incluir o e-mail do usuário
   logError(
     new Error('Individual video processing failed - email not available in payload'),
     'DLQ.Individual',
@@ -150,8 +131,6 @@ async function handleIndividualProcessingFailure(
     }
   );
 
-  // TODO: Buscar e-mail do usuário pelo jobId/clientId no banco de dados da API
-  // Por enquanto, apenas logamos a falha
   logRabbitMQ('dlq.individual.logged', `Individual failure logged (no email sent)`, {
     jobId: payload.jobId,
     clientId: payload.clientId,

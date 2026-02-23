@@ -1,12 +1,3 @@
-/**
- * Entrypoint que carrega as variáveis de ambiente do .env
- * ANTES de executar o main.ts.
- *
- * Como o módulo é CommonJS, os imports estáticos são resolvidos
- * na ordem do arquivo — então lemos o .env aqui antes de
- * chamar require('./main'), garantindo que process.env esteja
- * populado quando o tsyringe resolver o S3Gateway.
- */
 import * as fs from 'fs';
 import * as path from 'path';
 

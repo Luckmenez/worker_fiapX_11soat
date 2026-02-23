@@ -30,7 +30,6 @@ export class HealthCheckUseCase {
   private elasticsearchClient: Client | null = null;
 
   constructor() {
-    // S3 Client
     this.s3Client = new S3Client({
       region: process.env.AWS_REGION || 'us-east-1',
       credentials: {
@@ -39,7 +38,6 @@ export class HealthCheckUseCase {
       },
     });
 
-    // Elasticsearch Client (optional)
     if (process.env.ELASTICSEARCH_ENABLED === 'true') {
       this.elasticsearchClient = new Client({
         node: `http://${process.env.ELASTICSEARCH_HOST || 'localhost'}:${process.env.ELASTICSEARCH_PORT || '9200'}`,
@@ -78,7 +76,6 @@ export class HealthCheckUseCase {
   private async checkS3(): Promise<ServiceStatus> {
     const start = Date.now();
     try {
-      // Tenta listar buckets ou fazer ping no S3
       const command = new ListBucketsCommand({});
       const response = await this.s3Client.send(command);
       const responseTime = Date.now() - start;
@@ -115,7 +112,6 @@ export class HealthCheckUseCase {
 
       const channel = await connection.createChannel();
 
-      // Verifica se as filas existem
       const videoQueue = process.env.VIDEO_PROCESSING_QUEUE || 'video.processing';
       const batchQueue = process.env.BATCH_VIDEO_PROCESSING_QUEUE || 'batch.video.processing';
       const dlq = 'video.processing.dlq';
@@ -210,11 +206,9 @@ export class HealthCheckUseCase {
       const { promisify } = await import('util');
       const execAsync = promisify(exec);
 
-      // Verifica se o FFmpeg está instalado
       const { stdout } = await execAsync('ffmpeg -version');
       const responseTime = Date.now() - start;
 
-      // Extrai a versão do FFmpeg
       const versionMatch = stdout.match(/ffmpeg version ([^\s]+)/);
       const version = versionMatch ? versionMatch[1] : 'unknown';
 
@@ -251,7 +245,6 @@ export class HealthCheckUseCase {
       elasticsearch: services.elasticsearch,
     };
 
-    // Verifica serviços críticos
     const criticalStatuses = Object.values(criticalServices).map((s) => s.status);
     const hasCriticalError = criticalStatuses.some((s) => s === 'error');
 
@@ -259,15 +252,12 @@ export class HealthCheckUseCase {
       return 'unhealthy';
     }
 
-    // Verifica serviços opcionais
-    const hasOptionalError =
-      optionalServices.elasticsearch.status === 'error';
+    const hasOptionalError = optionalServices.elasticsearch.status === 'error';
 
     if (hasOptionalError) {
       return 'degraded';
     }
 
-    // Todos os serviços estão ok ou disabled
     return 'healthy';
   }
 
@@ -276,8 +266,6 @@ export class HealthCheckUseCase {
       if (this.elasticsearchClient) {
         await this.elasticsearchClient.close();
       }
-    } catch (error) {
-      // Silently ignore cleanup errors
-    }
+    } catch (error) {}
   }
 }

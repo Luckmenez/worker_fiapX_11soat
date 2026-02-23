@@ -55,7 +55,6 @@ export class ProcessVideoService implements IProcessVideoService {
     let zipPath: string | null = null;
 
     try {
-      // STEP 1: Download video from S3
       logVideoProcessing(jobId, 'download', 'Downloading video from S3', { step: '1/5' });
       const downloadStartTime = Date.now();
 
@@ -68,12 +67,16 @@ export class ProcessVideoService implements IProcessVideoService {
       });
 
       const fileStats = fs.statSync(localVideoPath);
-      logVideoProcessing(jobId, 'download', `Download completed in ${Date.now() - downloadStartTime}ms`, {
-        sizeMB: (fileStats.size / 1e6).toFixed(2),
-        durationMs: Date.now() - downloadStartTime,
-      });
+      logVideoProcessing(
+        jobId,
+        'download',
+        `Download completed in ${Date.now() - downloadStartTime}ms`,
+        {
+          sizeMB: (fileStats.size / 1e6).toFixed(2),
+          durationMs: Date.now() - downloadStartTime,
+        }
+      );
 
-      // STEP 2: Extract frames with FFmpeg
       logVideoProcessing(jobId, 'ffmpeg', 'Extracting frames via FFmpeg');
       const ffmpegStartTime = Date.now();
 
@@ -84,9 +87,11 @@ export class ProcessVideoService implements IProcessVideoService {
         format,
       });
 
-      logFFmpeg(jobId, `FFmpeg completed - ${frames.length} frames extracted`, { frames: frames.length, durationMs: Date.now() - ffmpegStartTime });
+      logFFmpeg(jobId, `FFmpeg completed - ${frames.length} frames extracted`, {
+        frames: frames.length,
+        durationMs: Date.now() - ffmpegStartTime,
+      });
 
-      // STEP 3: Create ZIP archive
       const zipName = `${jobId}_frames_interval_${intervalMs}ms.zip`;
       zipPath = path.join(OUTPUT_DIR, zipName);
 
@@ -96,9 +101,13 @@ export class ProcessVideoService implements IProcessVideoService {
       await zipDirectory(tmpDir, zipPath);
 
       const zipStats = fs.statSync(zipPath);
-      logVideoProcessing(jobId, 'zip.completed', `ZIP completed in ${Date.now() - zipStartTime}ms`, { sizeMB: (zipStats.size / 1e6).toFixed(2), durationMs: Date.now() - zipStartTime });
+      logVideoProcessing(
+        jobId,
+        'zip.completed',
+        `ZIP completed in ${Date.now() - zipStartTime}ms`,
+        { sizeMB: (zipStats.size / 1e6).toFixed(2), durationMs: Date.now() - zipStartTime }
+      );
 
-      // STEP 4: Upload ZIP to S3
       logVideoProcessing(jobId, 'upload', 'Uploading ZIP to S3');
       const uploadStartTime = Date.now();
 
@@ -109,11 +118,18 @@ export class ProcessVideoService implements IProcessVideoService {
         contentType: 'application/zip',
       });
 
-      logVideoProcessing(jobId, 'upload.completed', `Upload completed in ${Date.now() - uploadStartTime}ms`, { durationMs: Date.now() - uploadStartTime });
+      logVideoProcessing(
+        jobId,
+        'upload.completed',
+        `Upload completed in ${Date.now() - uploadStartTime}ms`,
+        { durationMs: Date.now() - uploadStartTime }
+      );
 
-      // STEP 5: Notify completion
       const durationMs = Date.now() - startedAt;
-      logVideoProcessing(jobId, 'completed', `Process completed in ${durationMs}ms`, { durationMs, frames: frames.length });
+      logVideoProcessing(jobId, 'completed', `Process completed in ${durationMs}ms`, {
+        durationMs,
+        frames: frames.length,
+      });
 
       await this.queueService.publishVideoCompleted({
         jobId,
@@ -143,7 +159,6 @@ export class ProcessVideoService implements IProcessVideoService {
 
       throw error;
     } finally {
-      // Cleanup local files
       logVideoProcessing(jobId, 'cleanup', 'Cleaning up local files');
       removeDir(tmpDir);
       if (localVideoPath && fs.existsSync(localVideoPath)) {
@@ -156,9 +171,6 @@ export class ProcessVideoService implements IProcessVideoService {
     }
   }
 
-  /**
-   * Extract filename from S3 presigned URL
-   */
   private extractFilenameFromUrl(url: string): string {
     try {
       const urlObj = new URL(url);
@@ -171,12 +183,17 @@ export class ProcessVideoService implements IProcessVideoService {
     }
   }
 
-  /**
-   * Process multiple videos from a batch
-   * Downloads videos from S3 input folder, processes each one, and uploads results to S3 output folder
-   */
   async processVideoBatch(options: ProcessVideoBatchOptions): Promise<ProcessVideoBatchResult> {
-    const { videoId, processingId, inputS3Uri, outputS3Uri, intervalMs, format, email, personName } = options;
+    const {
+      videoId,
+      processingId,
+      inputS3Uri,
+      outputS3Uri,
+      intervalMs,
+      format,
+      email,
+      personName,
+    } = options;
 
     const startedAt = Date.now();
     const tempInputDir = createTempDir(`batch-input-${videoId}-`);
@@ -187,7 +204,6 @@ export class ProcessVideoService implements IProcessVideoService {
     let videosProcessed = 0;
 
     try {
-      // STEP 1: Download all videos from S3 input folder
       logBatchProcessing(videoId, 'Downloading videos from S3', { step: '1/5' });
       const downloadStartTime = Date.now();
 
@@ -197,9 +213,12 @@ export class ProcessVideoService implements IProcessVideoService {
         throw new Error(`No videos found in ${inputS3Uri}`);
       }
 
-      logBatchProcessing(videoId, `Downloaded ${downloadedVideos.length} videos in ${Date.now() - downloadStartTime}ms`, { step: '1/5', count: downloadedVideos.length, durationMs: Date.now() - downloadStartTime });
+      logBatchProcessing(
+        videoId,
+        `Downloaded ${downloadedVideos.length} videos in ${Date.now() - downloadStartTime}ms`,
+        { step: '1/5', count: downloadedVideos.length, durationMs: Date.now() - downloadStartTime }
+      );
 
-      // STEP 2-4: Process each video
       for (const videoPath of downloadedVideos) {
         const videoFileName = path.basename(videoPath);
         const videoBaseName = path.parse(videoFileName).name;
@@ -208,9 +227,17 @@ export class ProcessVideoService implements IProcessVideoService {
         ensureDir(videoTempFramesDir);
 
         try {
-          logBatchProcessing(videoId, `Processing video ${videosProcessed + 1}/${downloadedVideos.length}: ${videoFileName}`, { step: '2/5', current: videosProcessed + 1, total: downloadedVideos.length, videoFileName });
+          logBatchProcessing(
+            videoId,
+            `Processing video ${videosProcessed + 1}/${downloadedVideos.length}: ${videoFileName}`,
+            {
+              step: '2/5',
+              current: videosProcessed + 1,
+              total: downloadedVideos.length,
+              videoFileName,
+            }
+          );
 
-          // Extract frames
           const ffmpegStartTime = Date.now();
           const { frames } = await this.ffmpegService.extractFrames({
             inputPath: videoPath,
@@ -220,10 +247,16 @@ export class ProcessVideoService implements IProcessVideoService {
           });
 
           totalFrames += frames.length;
-          logFFmpeg(videoId, `Extracted ${frames.length} frames in ${Date.now() - ffmpegStartTime}ms`, { frames: frames.length, durationMs: Date.now() - ffmpegStartTime });
+          logFFmpeg(
+            videoId,
+            `Extracted ${frames.length} frames in ${Date.now() - ffmpegStartTime}ms`,
+            { frames: frames.length, durationMs: Date.now() - ffmpegStartTime }
+          );
 
-          // STEP 3: Create ZIP
-          logBatchProcessing(videoId, `Creating ZIP for ${videoFileName}`, { step: '3/5', videoFileName });
+          logBatchProcessing(videoId, `Creating ZIP for ${videoFileName}`, {
+            step: '3/5',
+            videoFileName,
+          });
           const zipStartTime = Date.now();
 
           const zipName = `${videoBaseName}_frames_interval_${intervalMs}ms.zip`;
@@ -232,18 +265,27 @@ export class ProcessVideoService implements IProcessVideoService {
           await zipDirectory(videoTempFramesDir, zipPath);
 
           const zipStats = fs.statSync(zipPath);
-          logBatchProcessing(videoId, `ZIP created in ${Date.now() - zipStartTime}ms`, { step: '3/5', sizeMB: (zipStats.size / 1e6).toFixed(2), durationMs: Date.now() - zipStartTime });
+          logBatchProcessing(videoId, `ZIP created in ${Date.now() - zipStartTime}ms`, {
+            step: '3/5',
+            sizeMB: (zipStats.size / 1e6).toFixed(2),
+            durationMs: Date.now() - zipStartTime,
+          });
 
-          // STEP 4: Upload ZIP to S3
           logBatchProcessing(videoId, `Uploading ZIP to S3: ${zipName}`, { step: '4/5', zipName });
           const uploadStartTime = Date.now();
 
-          const s3Key = await this.s3Gateway.uploadFileToUri(zipPath, outputS3Uri, 'application/zip');
+          const s3Key = await this.s3Gateway.uploadFileToUri(
+            zipPath,
+            outputS3Uri,
+            'application/zip'
+          );
           zipFiles.push(s3Key);
 
-          logBatchProcessing(videoId, `Upload completed in ${Date.now() - uploadStartTime}ms`, { step: '4/5', durationMs: Date.now() - uploadStartTime });
+          logBatchProcessing(videoId, `Upload completed in ${Date.now() - uploadStartTime}ms`, {
+            step: '4/5',
+            durationMs: Date.now() - uploadStartTime,
+          });
 
-          // Cleanup individual video files
           removeFile(videoPath);
           removeFile(zipPath);
           removeDir(videoTempFramesDir);
@@ -251,14 +293,20 @@ export class ProcessVideoService implements IProcessVideoService {
           videosProcessed++;
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-          logError(error, 'ProcessVideoService.processVideoBatch.video', { videoId, videoFileName });
-          // Continue processing other videos
+          logError(error, 'ProcessVideoService.processVideoBatch.video', {
+            videoId,
+            videoFileName,
+          });
         }
       }
 
-      // STEP 5: Notify completion
       const durationMs = Date.now() - startedAt;
-      logBatchProcessing(videoId, `Batch completed in ${durationMs}ms`, { step: '5/5', videosProcessed, totalFrames, durationMs });
+      logBatchProcessing(videoId, `Batch completed in ${durationMs}ms`, {
+        step: '5/5',
+        videosProcessed,
+        totalFrames,
+        durationMs,
+      });
 
       await this.queueService.publishVideoCompleted({
         jobId: videoId,
@@ -266,15 +314,12 @@ export class ProcessVideoService implements IProcessVideoService {
         framesExtracted: totalFrames,
       });
 
-      // Send success email notification
       if (email) {
         try {
           const processingTimeSeconds = Math.round(durationMs / 1000);
           const minutes = Math.floor(processingTimeSeconds / 60);
           const seconds = processingTimeSeconds % 60;
-          const processingTime = minutes > 0
-            ? `${minutes}min ${seconds}s`
-            : `${seconds}s`;
+          const processingTime = minutes > 0 ? `${minutes}min ${seconds}s` : `${seconds}s`;
 
           await this.emailService.sendProcessingCompleted(email, {
             personName: personName || 'Cliente',
@@ -286,7 +331,6 @@ export class ProcessVideoService implements IProcessVideoService {
 
           logBatchProcessing(videoId, 'Success email sent', { email });
         } catch (emailError) {
-          // Log but don't fail the whole process
           logError(emailError, 'ProcessVideoService.sendSuccessEmail', { videoId, email });
         }
       }
@@ -312,7 +356,6 @@ export class ProcessVideoService implements IProcessVideoService {
 
       throw error;
     } finally {
-      // Cleanup
       logBatchProcessing(videoId, 'Cleaning up temporary files', { step: 'cleanup' });
       removeDir(tempInputDir);
       removeDir(tempFramesDir);

@@ -104,7 +104,6 @@ export class EmailService implements IEmailService {
         subject: options.subject,
       });
 
-      // Re-throw to allow caller to handle
       throw new Error(
         `Failed to send email: ${error instanceof Error ? error.message : 'Unknown error'}`
       );

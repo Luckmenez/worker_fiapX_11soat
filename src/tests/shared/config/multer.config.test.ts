@@ -48,7 +48,6 @@ describe('multer.config', () => {
         });
       });
 
-      // Verify filename follows pattern: name-timestamp-random.ext
       expect(filename).toMatch(/^test-video-\d+-\d+\.mp4$/);
     });
   });

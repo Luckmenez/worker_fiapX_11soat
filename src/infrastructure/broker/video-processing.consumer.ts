@@ -7,14 +7,10 @@ import { logRabbitMQ, logError } from '../monitoring';
 
 const QUEUE_NAME = process.env.VIDEO_PROCESSING_QUEUE || 'video.processing';
 
-/**
- * Extract S3 prefix (folder path) from presigned URL
- */
 function extractS3PrefixFromUrl(presignedUrl: string): string {
   try {
     const url = new URL(presignedUrl);
     const pathname = url.pathname;
-    // Remove leading slash and extract directory path
     const key = pathname.startsWith('/') ? pathname.substring(1) : pathname;
     return key;
   } catch (error) {
@@ -52,7 +48,6 @@ export async function startVideoProcessingConsumer(): Promise<void> {
       const intervalMs =
         payload.framesPerSecond > 0 ? Math.round(1000 / payload.framesPerSecond) : 1000;
 
-      // Extract output S3 prefix from outputUrlStorage
       const outputS3Prefix = extractS3PrefixFromUrl(payload.outputUrlStorage);
 
       await processVideoService.processVideo({
@@ -63,7 +58,9 @@ export async function startVideoProcessingConsumer(): Promise<void> {
         outputS3Prefix,
       });
 
-      logRabbitMQ('consumer.success', `Job ${payload.jobId} processed successfully`, { jobId: payload.jobId });
+      logRabbitMQ('consumer.success', `Job ${payload.jobId} processed successfully`, {
+        jobId: payload.jobId,
+      });
       channel.ack(msg);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
