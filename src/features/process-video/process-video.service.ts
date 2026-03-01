@@ -310,6 +310,7 @@ export class ProcessVideoService implements IProcessVideoService {
 
       await this.queueService.publishVideoCompleted({
         jobId: videoId,
+        processingId,
         status: 'COMPLETED',
         framesExtracted: totalFrames,
       });
@@ -350,6 +351,7 @@ export class ProcessVideoService implements IProcessVideoService {
 
       await this.queueService.publishVideoCompleted({
         jobId: videoId,
+        processingId,
         status: 'FAILED',
         error: errorMsg,
       });

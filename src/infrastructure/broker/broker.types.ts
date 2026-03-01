@@ -9,6 +9,7 @@ export interface VideoProcessingMessageDTO {
 
 export interface VideoCompletedMessageDTO {
   jobId: string;
+  processingId?: string;
   status: 'COMPLETED' | 'FAILED';
   error?: string;
   framesExtracted?: number;

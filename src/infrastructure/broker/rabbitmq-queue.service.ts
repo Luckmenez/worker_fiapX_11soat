@@ -34,6 +34,41 @@ export class RabbitMQQueueService {
 
       throw new Error(`RabbitMQ unavailable: ${errorMessage}`);
     }
+
+    await this.sendCallback(message);
+  }
+
+  private async sendCallback(message: VideoCompletedMessageDTO): Promise<void> {
+    const callbackUrl = process.env.VIDEO_CALLBACK_URL || 'http://localhost:3001/videos/callback';
+
+    const body: Record<string, unknown> = {
+      id: message.jobId,
+      id_processamento: message.processingId,
+      status: message.status,
+    };
+
+    if (message.error) {
+      body.error = message.error;
+    }
+
+    try {
+      const response = await fetch(callbackUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      logRabbitMQ('callback.sent', `Callback sent to ${callbackUrl}`, {
+        jobId: message.jobId,
+        status: message.status,
+        httpStatus: response.status,
+      });
+    } catch (error) {
+      logError(error, 'RabbitMQQueueService.sendCallback', {
+        callbackUrl,
+        jobId: message.jobId,
+      });
+    }
   }
 
   async close(): Promise<void> {
