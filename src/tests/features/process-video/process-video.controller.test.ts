@@ -15,6 +15,7 @@ describe('ProcessVideoController', () => {
   beforeEach(() => {
     mockService = {
       processVideo: vi.fn(),
+      processVideoBatch: vi.fn(),
     };
 
     jsonMock = vi.fn();
@@ -98,11 +99,13 @@ describe('ProcessVideoController', () => {
 
       await controller.process(mockRequest as Request, mockResponse as Response);
 
-      expect(mockService.processVideo).toHaveBeenCalledWith({
-        file: 'test.mp4',
-        intervalMs: 1000,
-        format: 'jpg',
-      });
+      expect(mockService.processVideo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file: 'test.mp4',
+          intervalMs: 1000,
+          format: 'jpg',
+        })
+      );
       expect(jsonMock).toHaveBeenCalledWith(mockResult);
     });
 
@@ -128,11 +131,13 @@ describe('ProcessVideoController', () => {
 
       await controller.process(mockRequest as Request, mockResponse as Response);
 
-      expect(mockService.processVideo).toHaveBeenCalledWith({
-        file: 'test.mp4',
-        intervalMs: 2000,
-        format: 'jpg',
-      });
+      expect(mockService.processVideo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file: 'test.mp4',
+          intervalMs: 2000,
+          format: 'jpg',
+        })
+      );
     });
 
     it('should process video with png format', async () => {
@@ -157,11 +162,13 @@ describe('ProcessVideoController', () => {
 
       await controller.process(mockRequest as Request, mockResponse as Response);
 
-      expect(mockService.processVideo).toHaveBeenCalledWith({
-        file: 'test.mp4',
-        intervalMs: 1000,
-        format: 'png',
-      });
+      expect(mockService.processVideo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file: 'test.mp4',
+          intervalMs: 1000,
+          format: 'png',
+        })
+      );
     });
 
     it('should process video with both custom interval_ms and format', async () => {
@@ -186,11 +193,13 @@ describe('ProcessVideoController', () => {
 
       await controller.process(mockRequest as Request, mockResponse as Response);
 
-      expect(mockService.processVideo).toHaveBeenCalledWith({
-        file: 'test.mp4',
-        intervalMs: 500,
-        format: 'png',
-      });
+      expect(mockService.processVideo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file: 'test.mp4',
+          intervalMs: 500,
+          format: 'png',
+        })
+      );
       expect(jsonMock).toHaveBeenCalledWith(mockResult);
     });
 

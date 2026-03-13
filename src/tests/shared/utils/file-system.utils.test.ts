@@ -202,7 +202,6 @@ describe('file-system.utils', () => {
       await zipDirectory(sourceDir, zipPath);
 
       const zipBuffer = fs.readFileSync(zipPath);
-      // ZIP files start with PK (0x504B)
       expect(zipBuffer[0]).toBe(0x50);
       expect(zipBuffer[1]).toBe(0x4b);
     });
@@ -235,7 +234,6 @@ describe('file-system.utils', () => {
       const nonExistentDir = path.join(testDir, 'non-existent-source');
       const zipPath = path.join(testDir, 'empty-output.zip');
 
-      // archiver creates an empty zip when directory doesn't exist (no error thrown)
       await zipDirectory(nonExistentDir, zipPath);
 
       expect(fs.existsSync(zipPath)).toBe(true);

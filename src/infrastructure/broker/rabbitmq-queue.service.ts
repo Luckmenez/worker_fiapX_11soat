@@ -1,11 +1,11 @@
 import { injectable } from 'tsyringe';
 import { rabbitmqClient } from './broker.gateway';
 import { VideoCompletedMessageDTO } from './broker.types';
+import { logRabbitMQ, logError } from '../monitoring';
 
 @injectable()
 export class RabbitMQQueueService {
   async publishVideoCompleted(message: VideoCompletedMessageDTO): Promise<void> {
-    // const startTime = Date.now();
     try {
       const channel = await rabbitmqClient.getChannel();
       const queue = process.env.VIDEO_COMPLETED_QUEUE || 'video.completed';
@@ -21,9 +21,8 @@ export class RabbitMQQueueService {
         throw new Error('Failed to send message to queue (buffer full)');
       }
 
-      // const duration = Date.now() - startTime;
-
-      console.log(`[RabbitMQ] Message published to ${queue}:`, {
+      logRabbitMQ('publish.completed', `Message published to ${queue}`, {
+        queue,
         jobId: message.jobId,
         status: message.status,
         framesExtracted: message.framesExtracted,
@@ -31,9 +30,44 @@ export class RabbitMQQueueService {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-      console.error('[RabbitMQ] Failed to publish message:', errorMessage);
+      logError(error, 'RabbitMQQueueService.publishVideoCompleted', { message });
 
       throw new Error(`RabbitMQ unavailable: ${errorMessage}`);
+    }
+
+    await this.sendCallback(message);
+  }
+
+  private async sendCallback(message: VideoCompletedMessageDTO): Promise<void> {
+    const callbackUrl = process.env.VIDEO_CALLBACK_URL || 'http://localhost:3001/videos/callback';
+
+    const body: Record<string, unknown> = {
+      id: message.jobId,
+      id_processamento: message.processingId,
+      status: message.status,
+    };
+
+    if (message.error) {
+      body.error = message.error;
+    }
+
+    try {
+      const response = await fetch(callbackUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      logRabbitMQ('callback.sent', `Callback sent to ${callbackUrl}`, {
+        jobId: message.jobId,
+        status: message.status,
+        httpStatus: response.status,
+      });
+    } catch (error) {
+      logError(error, 'RabbitMQQueueService.sendCallback', {
+        callbackUrl,
+        jobId: message.jobId,
+      });
     }
   }
 

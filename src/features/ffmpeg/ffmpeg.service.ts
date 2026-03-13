@@ -11,8 +11,6 @@ export class FfmpegService implements IFfmpegService {
   async extractFrames(options: ExtractFramesOptions): Promise<ExtractFramesResult> {
     const { inputPath, outputDir, intervalMs, format } = options;
 
-    // Converte intervalo em milissegundos para FPS
-    // Ex: 3000ms = 1 frame a cada 3 segundos = 1/3 FPS
     const intervalSeconds = intervalMs / 1000;
     const fps = 1 / intervalSeconds;
 
@@ -74,7 +72,6 @@ export class FfmpegService implements IFfmpegService {
       let stderr = '';
       let lastProgressLog = Date.now();
 
-      // Log de progresso a cada 10 segundos
       const progressInterval = setInterval(() => {
         const elapsed = Math.round((Date.now() - lastProgressLog) / 1000);
         console.log(

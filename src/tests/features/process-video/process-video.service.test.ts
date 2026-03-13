@@ -24,6 +24,8 @@ describe('ProcessVideoService', () => {
   let service: ProcessVideoService;
   let mockFfmpegService: IFfmpegService;
   let mockQueueService: RabbitMQQueueService;
+  let mockS3Gateway: any;
+  let mockEmailService: any;
   let testInputDir: string;
   let testOutputDir: string;
   let testTempDir: string;
@@ -45,6 +47,17 @@ describe('ProcessVideoService', () => {
       close: vi.fn().mockResolvedValue(undefined),
     } as unknown as RabbitMQQueueService;
 
+    mockS3Gateway = {
+      downloadFromUrl: vi.fn().mockResolvedValue(undefined),
+      uploadFile: vi.fn().mockResolvedValue('s3-key'),
+    };
+
+    mockEmailService = {
+      sendEmail: vi.fn().mockResolvedValue(undefined),
+      sendProcessingFailed: vi.fn().mockResolvedValue(undefined),
+      sendProcessingCompleted: vi.fn().mockResolvedValue(undefined),
+    };
+
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -54,7 +67,12 @@ describe('ProcessVideoService', () => {
     (fileSystemUtils.zipDirectory as Mock).mockResolvedValue(undefined);
     (fileSystemUtils.ensureDir as Mock).mockImplementation(() => {});
 
-    service = new ProcessVideoService(mockFfmpegService, mockQueueService);
+    service = new ProcessVideoService(
+      mockFfmpegService,
+      mockQueueService,
+      mockS3Gateway,
+      mockEmailService
+    );
   });
 
   afterEach(() => {
@@ -85,6 +103,8 @@ describe('ProcessVideoService', () => {
 
       const options: ProcessVideoOptions = {
         file: videoFile,
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       const result = await service.processVideo(options);
@@ -94,7 +114,7 @@ describe('ProcessVideoService', () => {
       expect(result.intervalMs).toBe(1000);
       expect(result.format).toBe('jpg');
       expect(result.frames).toBe(3);
-      expect(result.zipFile).toBe('test-video_frames_interval_1000ms.zip');
+      expect(result.zipFile).toBe('test-job-123_frames_interval_1000ms.zip');
       expect(result.durationMs).toBeGreaterThanOrEqual(0);
     });
 
@@ -110,12 +130,14 @@ describe('ProcessVideoService', () => {
       const options: ProcessVideoOptions = {
         file: videoFile,
         intervalMs: 2000,
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       const result = await service.processVideo(options);
 
       expect(result.intervalMs).toBe(2000);
-      expect(result.zipFile).toBe('test-video_frames_interval_2000ms.zip');
+      expect(result.zipFile).toBe('test-job-123_frames_interval_2000ms.zip');
       expect(mockFfmpegService.extractFrames).toHaveBeenCalledWith(
         expect.objectContaining({
           intervalMs: 2000,
@@ -135,6 +157,8 @@ describe('ProcessVideoService', () => {
       const options: ProcessVideoOptions = {
         file: videoFile,
         format: 'png',
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       const result = await service.processVideo(options);
@@ -147,19 +171,21 @@ describe('ProcessVideoService', () => {
       );
     });
 
-    it('should throw error when video file does not exist', async () => {
-      const videoFile = 'non-existent.mp4';
-      const videoPath = path.join(testInputDir, videoFile);
+    it('should throw error when S3 download fails', async () => {
+      const videoFile = 'https://s3.amazonaws.com/bucket/non-existent.mp4';
 
-      vi.spyOn(fileSystemUtils, 'safeJoin').mockReturnValue(videoPath);
-      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+      mockS3Gateway.downloadFromUrl.mockRejectedValueOnce(
+        new Error('S3 download failed: File not found')
+      );
 
       const options: ProcessVideoOptions = {
         file: videoFile,
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       await expect(service.processVideo(options)).rejects.toThrow(
-        `Arquivo de vídeo não encontrado: ${videoPath}`
+        'S3 download failed: File not found'
       );
     });
 
@@ -175,6 +201,8 @@ describe('ProcessVideoService', () => {
         file: videoFile,
         intervalMs: 500,
         format: 'jpg',
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       await service.processVideo(options);
@@ -197,13 +225,15 @@ describe('ProcessVideoService', () => {
 
       const options: ProcessVideoOptions = {
         file: videoFile,
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       await service.processVideo(options);
 
       expect(fileSystemUtils.zipDirectory).toHaveBeenCalledWith(
         testTempDir,
-        expect.stringContaining('test-video_frames_interval_1000ms.zip')
+        expect.stringContaining('test-job-123_frames_interval_1000ms.zip')
       );
     });
 
@@ -217,6 +247,8 @@ describe('ProcessVideoService', () => {
 
       const options: ProcessVideoOptions = {
         file: videoFile,
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       await service.processVideo(options);
@@ -236,6 +268,8 @@ describe('ProcessVideoService', () => {
 
       const options: ProcessVideoOptions = {
         file: videoFile,
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       await expect(service.processVideo(options)).rejects.toThrow('FFmpeg error');
@@ -254,6 +288,8 @@ describe('ProcessVideoService', () => {
 
       const options: ProcessVideoOptions = {
         file: videoFile,
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       await expect(service.processVideo(options)).rejects.toThrow('Zip error');
@@ -281,6 +317,8 @@ describe('ProcessVideoService', () => {
 
       const options: ProcessVideoOptions = {
         file: videoFile,
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       const result = await service.processVideo(options);
@@ -299,11 +337,13 @@ describe('ProcessVideoService', () => {
       const options: ProcessVideoOptions = {
         file: videoFile,
         intervalMs: 3000,
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       const result = await service.processVideo(options);
 
-      expect(result.zipFile).toBe('my-awesome-video_frames_interval_3000ms.zip');
+      expect(result.zipFile).toBe('test-job-123_frames_interval_3000ms.zip');
     });
 
     it('should measure duration correctly', async () => {
@@ -314,7 +354,6 @@ describe('ProcessVideoService', () => {
       vi.spyOn(fs, 'existsSync').mockReturnValue(true);
       vi.spyOn(fs, 'statSync').mockReturnValue({ size: 1024 * 1024 } as fs.Stats);
 
-      // Add artificial delay in mock
       (mockFfmpegService.extractFrames as Mock).mockImplementation(
         () =>
           new Promise((resolve) =>
@@ -331,6 +370,8 @@ describe('ProcessVideoService', () => {
 
       const options: ProcessVideoOptions = {
         file: videoFile,
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       const result = await service.processVideo(options);
@@ -348,6 +389,8 @@ describe('ProcessVideoService', () => {
 
       const options: ProcessVideoOptions = {
         file: videoFile,
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       await service.processVideo(options);
@@ -367,6 +410,8 @@ describe('ProcessVideoService', () => {
 
       const options: ProcessVideoOptions = {
         file: videoFile,
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       await expect(service.processVideo(options)).rejects.toThrow('FFmpeg error');
@@ -385,6 +430,8 @@ describe('ProcessVideoService', () => {
 
       const options: ProcessVideoOptions = {
         file: videoFile,
+        jobId: 'test-job-123',
+        outputS3Prefix: 'output/test',
       };
 
       await expect(service.processVideo(options)).rejects.toThrow('Zip error');
