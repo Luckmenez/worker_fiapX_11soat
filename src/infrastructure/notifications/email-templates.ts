@@ -1,6 +1,9 @@
 import { ProcessingFailedEmailData, ProcessingCompletedEmailData } from './email.service.interface';
 
-export function buildProcessingFailedEmail(data: ProcessingFailedEmailData): { html: string; text: string } {
+export function buildProcessingFailedEmail(data: ProcessingFailedEmailData): {
+  html: string;
+  text: string;
+} {
   const html = `
 <!DOCTYPE html>
 <html>
@@ -95,7 +98,10 @@ Este é um e-mail automático. Por favor, não responda.
   return { html, text };
 }
 
-export function buildProcessingCompletedEmail(data: ProcessingCompletedEmailData): { html: string; text: string } {
+export function buildProcessingCompletedEmail(data: ProcessingCompletedEmailData): {
+  html: string;
+  text: string;
+} {
   const html = `
 <!DOCTYPE html>
 <html>

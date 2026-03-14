@@ -1,7 +1,6 @@
 import pino from 'pino';
 import pinoElasticsearch from 'pino-elasticsearch';
 
-const isProduction = process.env.NODE_ENV === 'production';
 const isDevelopment = process.env.NODE_ENV === 'development';
 
 const elasticsearchEnabled =

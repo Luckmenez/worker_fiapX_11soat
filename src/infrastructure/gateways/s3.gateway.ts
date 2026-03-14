@@ -238,7 +238,7 @@ export class S3Gateway implements IS3Gateway {
       const pathname = url.pathname;
       const key = pathname.startsWith('/') ? pathname.substring(1) : pathname;
       return key || null;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -260,7 +260,7 @@ export class S3Gateway implements IS3Gateway {
       const key = withoutProtocol.substring(firstSlashIndex + 1);
 
       return { bucket, key };
-    } catch (error) {
+    } catch {
       return null;
     }
   }

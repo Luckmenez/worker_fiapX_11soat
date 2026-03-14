@@ -220,7 +220,7 @@ export class HealthCheckUseCase {
           available: true,
         },
       };
-    } catch (error) {
+    } catch {
       return {
         status: 'error',
         error: 'FFmpeg not found or not executable',
@@ -266,6 +266,8 @@ export class HealthCheckUseCase {
       if (this.elasticsearchClient) {
         await this.elasticsearchClient.close();
       }
-    } catch (error) {}
+    } catch {
+      // ignore cleanup errors
+    }
   }
 }

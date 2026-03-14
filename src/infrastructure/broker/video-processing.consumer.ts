@@ -63,7 +63,6 @@ export async function startVideoProcessingConsumer(): Promise<void> {
       });
       channel.ack(msg);
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       logError(error, 'VideoProcessingConsumer', { jobId: payload.jobId });
       channel.nack(msg, false, false);
     }

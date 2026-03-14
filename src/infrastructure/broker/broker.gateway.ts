@@ -138,7 +138,6 @@ class RabbitMQClient {
 
       logRabbitMQ('connection.close', 'Connection closed gracefully');
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logError(error, 'RabbitMQ.close');
     }
   }
