@@ -1,5 +1,6 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM --platform=linux/amd64 node:20-alpine AS builder
+RUN apk update && apk upgrade --no-cache
 
 WORKDIR /app
 
@@ -17,12 +18,12 @@ COPY src ./src
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine AS production
+FROM --platform=linux/amd64 node:20-alpine AS production
 
 WORKDIR /app
 
-# Instalar ffmpeg (necessário para processamento de vídeo)
-RUN apk add --no-cache ffmpeg
+# Atualizar pacotes do Alpine e instalar ffmpeg (reduz vulnerabilidades da base)
+RUN apk update && apk upgrade --no-cache && apk add --no-cache ffmpeg
 
 # Copiar arquivos de dependência
 COPY package*.json ./
