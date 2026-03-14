@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, Mock, type Mocked } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -26,8 +26,8 @@ describe('ProcessVideoService', () => {
   let service: ProcessVideoService;
   let mockFfmpegService: IFfmpegService;
   let mockQueueService: RabbitMQQueueService;
-  let mockS3Gateway: IS3Gateway;
-  let mockEmailService: IEmailService;
+  let mockS3Gateway: Mocked<IS3Gateway>;
+  let mockEmailService: Mocked<IEmailService>;
   let testInputDir: string;
   let testOutputDir: string;
   let testTempDir: string;
@@ -52,13 +52,13 @@ describe('ProcessVideoService', () => {
     mockS3Gateway = {
       downloadFromUrl: vi.fn().mockResolvedValue(undefined),
       uploadFile: vi.fn().mockResolvedValue('s3-key'),
-    };
+    } as unknown as Mocked<IS3Gateway>;
 
     mockEmailService = {
       sendEmail: vi.fn().mockResolvedValue(undefined),
       sendProcessingFailed: vi.fn().mockResolvedValue(undefined),
       sendProcessingCompleted: vi.fn().mockResolvedValue(undefined),
-    };
+    } as unknown as Mocked<IEmailService>;
 
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
