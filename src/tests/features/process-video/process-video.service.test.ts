@@ -6,6 +6,8 @@ import { ProcessVideoService } from '../../../features/process-video/process-vid
 import { IFfmpegService } from '../../../features/ffmpeg/ffmpeg.service.interface';
 import { RabbitMQQueueService } from '../../../infrastructure/broker/rabbitmq-queue.service';
 import { ProcessVideoOptions } from '../../../@types/process-video.types';
+import { IS3Gateway } from '../../../infrastructure/gateways/s3.gateway.interface';
+import { IEmailService } from '../../../infrastructure/notifications';
 import * as fileSystemUtils from '../../../shared/utils/file-system.utils';
 
 vi.mock('../../../shared/utils/file-system.utils', async () => {
@@ -24,8 +26,8 @@ describe('ProcessVideoService', () => {
   let service: ProcessVideoService;
   let mockFfmpegService: IFfmpegService;
   let mockQueueService: RabbitMQQueueService;
-  let mockS3Gateway: any;
-  let mockEmailService: any;
+  let mockS3Gateway: IS3Gateway;
+  let mockEmailService: IEmailService;
   let testInputDir: string;
   let testOutputDir: string;
   let testTempDir: string;

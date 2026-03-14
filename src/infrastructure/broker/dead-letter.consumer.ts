@@ -7,7 +7,6 @@ import { IEmailService } from '../notifications';
 import { logRabbitMQ, logError } from '../monitoring';
 
 const DLQ_NAME = 'video.processing.dlq';
-const MAX_RETRY_COUNT = 2;
 
 export async function startDeadLetterConsumer(): Promise<void> {
   try {
@@ -91,7 +90,6 @@ async function handleBatchProcessingFailure(
   });
 
   const videoIds = videos.map((v) => v.id).join(', ');
-  const firstVideo = videos[0];
 
   await emailService.sendProcessingFailed(person.email, {
     personName: person.name,

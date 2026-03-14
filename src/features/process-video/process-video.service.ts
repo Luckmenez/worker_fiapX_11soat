@@ -292,7 +292,6 @@ export class ProcessVideoService implements IProcessVideoService {
 
           videosProcessed++;
         } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
           logError(error, 'ProcessVideoService.processVideoBatch.video', {
             videoId,
             videoFileName,

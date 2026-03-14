@@ -30,7 +30,7 @@ export async function startBatchVideoProcessingConsumer(): Promise<void> {
 
     try {
       payload = JSON.parse(content) as BatchVideoProcessingMessageDTO;
-    } catch (error) {
+    } catch {
       logError(new Error('Failed to parse batch message'), 'BatchVideoProcessingConsumer');
       channel.nack(msg, false, false);
       return;
@@ -80,7 +80,6 @@ export async function startBatchVideoProcessingConsumer(): Promise<void> {
           });
         } catch (error) {
           failureCount++;
-          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
           logError(error, 'BatchVideoProcessingConsumer.video', {
             videoId: video.id,
             failureCount,
@@ -98,7 +97,6 @@ export async function startBatchVideoProcessingConsumer(): Promise<void> {
 
       channel.ack(msg);
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       logError(error, 'BatchVideoProcessingConsumer.batch', {
         retryCount,
         email: person.email,
